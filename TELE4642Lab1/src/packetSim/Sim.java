@@ -1,5 +1,6 @@
 package packetSim;
 
+import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Queue;
@@ -7,7 +8,7 @@ import java.util.stream.IntStream;
 
 public class Sim {
 	static String mu = "\u03bc";
-	final static double meanPacketSize = 10000.0;//10000 bits
+	final static double meanPacketSize = 10000.0;	//10000 bits
 	final static double capacity = 100000.0;		//10Gbps -> 100000 bit per us
 	
 	static double runTime = 0.0;
@@ -22,18 +23,25 @@ public class Sim {
 		
 		System.out.println("===\tGenerating " + npkts + " Packet(s)\t   ===");	
 		LinkedList<Packet> event = poissonPacketGenerator(npkts, lambda);
-		System.out.println("===\tPacket(s) Generated\t   ===");
+		System.out.println("\n===\tPacket Generated\t   ===\n");
 		
+		System.out.println("===\tStarting Simulation\t   ===");		
+		long startTime = System.currentTimeMillis();
 		simulate(event);
+		long stopTime = System.currentTimeMillis();
+		long elapsedTime = stopTime - startTime;
+		System.out.println("\n===\tSimulation Ended\t   ===");		
+		System.out.println("===\tTotal Time Used: " + elapsedTime/1000.0 + "s\t   ===\n");
 		
-		System.out.println("\nTotal Number of Packet(s)  " + npkts);
+		System.out.println("Total Number of Packet(s)  " + npkts);
 		System.out.println("Average Wait Time \t" + String.format("%10.5f", Math.round(waitTime/npkts*10000.0)/10000.0) + " us");
 		System.out.println("Average Run  Time \t" + String.format("%10.5f", Math.round(runTime/npkts*10000.0)/10000.0) + " us");
 		System.out.println("Average Stay Time \t" + String.format("%10.5f", Math.round((runTime+waitTime)/npkts*10000.0)/10000.0) + " us\n");
 
 		double total = IntStream.of(length_count).parallel().sum();
 		for(int i = 0; i <= 10; i++)
-			System.out.println("P(" + String.format("%2d", i) + "): " + String.format("%2.2f", Math.round(length_count[i]/total*10000.0)/100.0));
+			System.out.println("P(" + String.format("%2d", i) + "): " + String.format("%2.2f", Math.round(length_count[i]/total*10000.0)/100.0) + "%");
+		
 		//System.out.println(mu);
 		/*
 		//Testing Bellow 
@@ -118,8 +126,7 @@ public class Sim {
 			time += interval;
 			Packet p = new Packet(i, (int) exponentialNumberGenerator(1/meanPacketSize), time);
 			lst.add(p);
-		}
-		
+		}		
 		return lst;
 	}
 
