@@ -1,7 +1,12 @@
 package packetSim;
 
-import java.util.Calendar;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Queue;
 import java.util.stream.IntStream;
@@ -18,11 +23,37 @@ public class Sim {
 
 	public static void main(String[] args) {
 		
-		int npkts = Integer.parseInt(args[0]);
-		double lambda = Double.parseDouble(args[1]);
+		int npkts = 0;
+		double lambda = 0;
+		Path file;
+		LinkedList<Packet> event;
+		
+		if(args.length == 1){
+			try {
+				event = fileReader("test");
+			} catch (NoSuchFileException nsfe) {
+				System.err.println("No Such File.");
+				return;
+			}catch (IOException e) {
+				e.printStackTrace();
+				return;
+			} 
+			//file = Path.get(args[0]);
+		}else if(args.length == 2){
+			try{
+				npkts = Integer.parseInt(args[0]);
+				lambda = Double.parseDouble(args[1]);				
+			} catch (NumberFormatException jfe) {
+				System.err.println("Invalid Input");
+				return;
+			}
+		}else{
+			System.err.println("Missing Input");
+			return;
+		}
 		
 		System.out.println("===\tGenerating " + npkts + " Packet(s)\t   ===");	
-		LinkedList<Packet> event = poissonPacketGenerator(npkts, lambda);
+		event = poissonPacketGenerator(npkts, lambda);
 		System.out.println("\n===\tPacket Generated\t   ===\n");
 		
 		System.out.println("===\tStarting Simulation\t   ===");		
@@ -41,34 +72,43 @@ public class Sim {
 		double total = IntStream.of(length_count).parallel().sum();
 		for(int i = 0; i <= 10; i++)
 			System.out.println("P(" + String.format("%2d", i) + "): " + String.format("%2.2f", Math.round(length_count[i]/total*10000.0)/100.0) + "%");
+	}
+	
+	private static LinkedList<Packet> fileReader(String filename) throws IOException{
+		return fileReader("./", filename);
+	}
+	
+	private static LinkedList<Packet> fileReader(String path, String filename) throws IOException{
+		LinkedList<Packet> lst = new LinkedList<Packet>();
+		String filepath = path + filename + ".txt";
+		Path file = Paths.get(filepath);
 		
-		//System.out.println(mu);
-		/*
-		//Testing Bellow 
-		for(Packet p: event)
-			System.out.println("pkt: " + p.getNum() + " " + p.getArrivalTime());
-		*/
-		//System.out.println(exponentialNumberGenerator(1/meanPacketSize));
+		List<String> lst1 = Files.readAllLines(file);
 		
+		lst1.forEach(System.out::println);
+		
+		return lst;
 	}
 	
 	private static void simulate(LinkedList<Packet> event){
 		
 		Queue<Packet> buffer = new LinkedList<Packet>();
-		boolean run_state = false;
+		//boolean run_state = false;
+		Packet services1 = null;
 		
 		while(!event.isEmpty()){
 			
 			Packet p = event.poll();
 			double currentTime = p.getProcessTime();
-			System.out.print("[" + String.format("%10.5f", Math.round(currentTime*10000.0)/10000.0) + "]: Packet " + String.format("%5d", Math.round(p.getNum())));
+			System.out.print("[" + String.format("%10.5f", Math.round(currentTime*10000.0)/10000.0) + "]: Packet " + String.format("%7d", Math.round(p.getNum())));
 			
 			if(p.getType().equals("Arrival")){
 				System.out.print(" arrives with size " + p.getSize() + " and");
-				if(!run_state){	
+				if(services1 == null){	
 					System.out.print(" runs. ");
 					scheduleDeparture(currentTime, p, event);
-					run_state = true;
+					services1 = p;
+					//run_state = true;
 				}else{
 					int size = buffer.size();
 					try{
@@ -85,10 +125,11 @@ public class Sim {
 					waitTime += currentTime;	//wait time = Current Time - Arrival Time
 					p = buffer.poll();
 					waitTime -= p.getArrivalTime();					
-					System.out.print("\n[" + String.format("%10.5f", Math.round(currentTime*10000.0)/10000.0) + "]: Packet " + String.format("%5d", Math.round(p.getNum())) + " departs from buffer and runs. ");
+					System.out.print("\n[" + String.format("%10.5f", Math.round(currentTime*10000.0)/10000.0) + "]: Packet " + String.format("%7d", Math.round(p.getNum())) + " departs from buffer and runs. ");
 					scheduleDeparture(currentTime, p, event);
 				}else{
-					run_state = false;
+					//run_state = false;
+					services1 = null;
 				}
 			}
 			System.out.println();		
